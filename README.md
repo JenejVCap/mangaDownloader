@@ -1,2 +1,2 @@
-# mangaDwnloader
+# mangaDownloader
 download manga
