@@ -6,6 +6,8 @@ import org.jsoup.nodes.{Document, Element}
 import java.net._
 import java.io._
 
+import Config.Config._
+
 /**
   * mangareader.net uses a standard url pattern
   * a) every chapter's first page:
@@ -34,24 +36,26 @@ object MangaDownloader {
   def main(args: Array[String]): Unit = {
 
     //hardcode a solution first
-    val mangaName = "bleach"
-    val mangaReaderUrl = "https://www.mangareader.net/"
-    val mangaBaseLink = s"${mangaReaderUrl}${mangaName}/"
-    val firstPage = s"${mangaBaseLink}1"
-    val lines: String = Source.fromURL(firstPage).getLines.mkString("\n")
 
-    val doc = Jsoup.parse(lines)
-    val navbarPages = doc.getElementById("pageMenu")
-    val pages = navbarPages.getElementsByTag("option")
-    val lastPage = pages.size
-    val currentChapter = "1"
-    val imageLinks = (1 to lastPage) map {
-      imageNo =>
-        val page = s"${mangaBaseLink}${currentChapter}/$imageNo"
-        val pageLines: String = Source.fromURL(page).getLines.mkString("\n")
-        val doc = Jsoup.parse(pageLines)
-        val img = doc.getElementById("img").attr("src")
-        downloadFile(img, (currentChapter, imageNo))
+    (1 to 10) map {
+      currentChapter => {
+        val firstPage = s"${mangaBaseLink}$currentChapter"
+        val lines: String = Source.fromURL(firstPage).getLines.mkString("\n")
+        val doc = Jsoup.parse(lines)
+        val navbarPages = doc.getElementById("pageMenu")
+        val pages = navbarPages.getElementsByTag("option")
+        val lastPage = pages.size
+        val imageLinks = (1 to lastPage) map {
+          imageNo =>
+            val page = s"${mangaBaseLink}${currentChapter}/$imageNo"
+            val pageLines: String = Source.fromURL(page).getLines.mkString("\n")
+            val doc = Jsoup.parse(pageLines)
+            val img = doc.getElementById("img").attr("src")
+            downloadFile(img, (currentChapter.toString, imageNo))
+        }
+
+      }
+
     }
   }
 
@@ -60,8 +64,10 @@ object MangaDownloader {
     val connection = url.openConnection().asInstanceOf[HttpURLConnection]
     connection.setRequestMethod("GET")
     val in: InputStream = connection.getInputStream
-    val chapterDirectory = new File(s"src/test/resources/${chapterAndId._1}").mkdirs()
-    val fileToDownloadAs: File = new File(s"src/test/resources/${chapterAndId._1}/${chapterAndId._2}.jpg")
+    val chapterDirectory = new File(s"$singleThreadedResultDirectory${chapterAndId._1}").mkdirs()
+    val fileToDownloadAs: File = new File(
+      s"$singleThreadedResultDirectory${chapterAndId._1}/${chapterAndId._2}$imageSuffix"
+    )
     val out: OutputStream = new BufferedOutputStream(new FileOutputStream(fileToDownloadAs))
     val byteArray = Stream.continually(in.read).takeWhile(-1 !=).map(_.toByte).toArray
     out.write(byteArray)
