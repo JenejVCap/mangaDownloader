@@ -5,6 +5,8 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.{Document, Element}
 import java.net._
 import java.io._
+import Crawler._
+import IO._
 
 import Config.Config._
 
@@ -32,44 +34,25 @@ import Config.Config._
   *  step 4: move to next chapter
   */
 
-object MangaDownloader {
+object SIngleThreadedMangaDownloader {
   def main(args: Array[String]): Unit = {
 
-    //hardcode a solution first
-
-    (1 to 10) map {
+    (1 to chapters) foreach {
       currentChapter => {
-        val firstPage = s"${mangaBaseLink}$currentChapter"
+        val firstPage = s"$mangaBaseLink$currentChapter"
         val lines: String = Source.fromURL(firstPage).getLines.mkString("\n")
-        val doc = Jsoup.parse(lines)
-        val navbarPages = doc.getElementById("pageMenu")
-        val pages = navbarPages.getElementsByTag("option")
-        val lastPage = pages.size
-        val imageLinks = (1 to lastPage) map {
-          imageNo =>
-            val page = s"${mangaBaseLink}${currentChapter}/$imageNo"
-            val pageLines: String = Source.fromURL(page).getLines.mkString("\n")
-            val doc = Jsoup.parse(pageLines)
-            val img = doc.getElementById("img").attr("src")
-            downloadFile(img, (currentChapter.toString, imageNo))
+        Crawler.firstChapterPages(lines) match {
+          case MangaFirstPageDocument(_, size) => (1 to size) foreach {
+            imageNo =>
+              val page = s"$mangaBaseLink$currentChapter/$imageNo"
+              val pageLines: String = Source.fromURL(page).getLines.mkString("\n")
+              val doc = Jsoup.parse(pageLines)
+              val img = doc.getElementById("img").attr("src")
+              IO.downloadFile(img, (currentChapter.toString, imageNo))
+          }
+          case _ => Unit
         }
-
       }
-
     }
-  }
-
-  def downloadFile(imageLink: String, chapterAndId: (String, Int)) {
-    val url = new URL(imageLink)
-    val connection = url.openConnection().asInstanceOf[HttpURLConnection]
-    connection.setRequestMethod("GET")
-    val in: InputStream = connection.getInputStream
-    val chapterDirectory = new File(s"$singleThreadedResultDirectory${chapterAndId._1}").mkdirs()
-    val fileToDownloadAs: File = new File(
-      s"$singleThreadedResultDirectory${chapterAndId._1}/${chapterAndId._2}$imageSuffix"
-    )
-    val out: OutputStream = new BufferedOutputStream(new FileOutputStream(fileToDownloadAs))
-    val byteArray = Stream.continually(in.read).takeWhile(-1 !=).map(_.toByte).toArray
-    out.write(byteArray)
   }
 }
