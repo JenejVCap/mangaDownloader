@@ -34,7 +34,7 @@ import Config.Config._
   *  step 4: move to next chapter
   */
 
-object SIngleThreadedMangaDownloader {
+object SingleThreadedMangaDownloader {
   def main(args: Array[String]): Unit = {
 
     (1 to chapters) foreach {
